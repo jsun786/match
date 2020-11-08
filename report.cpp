@@ -1,26 +1,57 @@
 /**
  * Generate report for an integration test.
  *
- * Copyright (c) 2019, Sekhar Ravinutala.
+ * Copyright (c) 2020, Jiayue Sun.
  */
 
 #include <algorithm>
-#include <vector>
 #include <cstdio>
+#include <vector>
+
 #include "data/data.h"
 #include "match/match.h"
 
-int main() {
-  std::vector<Profile> up = profiles(10);
-  for (auto p : up) {
-    printf("%d, %d: %f, %d: %f, %d: %f, %d: %f, %d: %f, %d: %f\n",
-      p.id,
-      std::get<0>(p.country), std::get<1>(p.country),
-      std::get<0>(p.diet), std::get<1>(p.diet),
-      std::get<0>(p.drinking), std::get<1>(p.drinking),
-      p.gender, 0.0,
-      std::get<0>(p.language), std::get<1>(p.language),
-      std::get<0>(p.religion), std::get<1>(p.religion),
-      std::get<0>(p.smoking), std::get<1>(p.smoking));
+// helpers from match/match.cpp
+double compatibilityScore(Profile, Profile);
+template <class T>
+double attributeScore(std::tuple<T, double>, std::tuple<T, double>);
+
+// Return the compatibility score of two users identified by their IDs from a
+// vector of profiles, return -1 if any of the IDs is not found in the vector
+double compatibilityScore(uint32_t id0, uint32_t id1,
+                          std::vector<Profile>& users) {
+  Profile* user0Ptr = nullptr;
+  Profile* user1Ptr = nullptr;
+  for (auto& user : users) {
+    if (user.id == id0) {
+      user0Ptr = &user;
+      break;
+    }
   }
+  for (auto& user : users) {
+    if (user.id == id1) {
+      user1Ptr = &user;
+      break;
+    }
+  }
+  if ((user0Ptr != nullptr) && (user1Ptr != nullptr)) {
+    return compatibilityScore(*user0Ptr, *user1Ptr);
+  } else {
+    return -1;
+  }
+}
+
+int main() {
+  std::vector<Profile> users = profiles(100);
+  std::map<uint32_t, uint32_t> pairs = Match::pairs(users);
+  printf("-----------------------------------------------\n");
+  printf("Male ID      Female ID      Compatibility Score\n");
+  printf("-----------------------------------------------\n");
+  for (auto& pair : pairs) {
+    uint32_t maleID = pair.first;
+    uint32_t femaleID = pair.second;
+    printf("%-13d%-15d%lf\n", maleID, femaleID,
+           compatibilityScore(maleID, femaleID, users));
+  }
+  printf("-----------------------------------------------\n");
 }
